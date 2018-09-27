@@ -7,16 +7,19 @@ import java.io.IOException;
 import java.lang.reflect.Type;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.Map;
+import java.util.Collection;
 import java.util.stream.Collectors;
 
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 
 import com.github.jknack.handlebars.Context;
 import com.github.jknack.handlebars.Handlebars;
+import com.github.jknack.handlebars.Helper;
+import com.github.jknack.handlebars.Options;
 import com.github.jknack.handlebars.Template;
 import com.github.jknack.handlebars.helper.*;
 import com.github.jknack.handlebars.io.FileTemplateLoader;
@@ -24,7 +27,6 @@ import com.github.jknack.handlebars.io.TemplateLoader;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.reflect.TypeToken;
 
@@ -44,12 +46,21 @@ public class HbcucumberReportPlugin extends AbstractMojo
     @Parameter(property = "reporting.generatedHtmlReportDirectory", required = true)
     private String generatedHtmlReportDirectory = "";
 
+    /**
+     * Handlebar Template File
+     */
     @Parameter(property = "reporting.sourceTemplateFile", required = true)
     private String sourceTemplateFile = "";
     
+    /**
+     * Whether to throw error for unrecognized helpers in template
+     */
+    @Parameter(property = "reporting.throwExceptionUnrecognizedHelper", defaultValue = "false")
+    private Boolean throwExceptionUnrecognizedHelper;
+    
+    private Log logger = getLog();
     public void execute() throws MojoExecutionException
     {   
-    	var logger = getLog();
     	logger.info(sourceJsonReportDirectory);
     	
     	File templateFile = new File(sourceTemplateFile);
@@ -78,19 +89,31 @@ public class HbcucumberReportPlugin extends AbstractMojo
 	    for (ConditionalHelpers helper : helpers) {
 	    	handlebars.registerHelper(helper.name(), helper);
 	    }
-	       
+	    
+	    //Override Missing Helper to not throw exception
+	    if (throwExceptionUnrecognizedHelper == false) {
+		    handlebars.registerHelperMissing(new Helper<Object>() {
+		    	@Override
+		        public CharSequence apply(final Object context, final Options options) throws IOException {
+		    	  logger.error("UNRECOGNIZED HELPER IN TEMPLATE: " + options.fn.text());
+		          return options.fn.text();
+		        }
+		      });
+	    }
+	    
 	    // Fetch the report data
     	String reportData;
   		try {
-    		reportData = mergeJsonReports(dataFiles);
+    		reportData = mergeJsonReports(dataFiles);    		
 		} catch (IOException e) {
-			throw new MojoExecutionException("Error in reading JSON Result File: " + sourceJsonReportDirectory + "\\report_cashback.json Exception: " + e.getMessage());
+			e.printStackTrace();
+			throw new MojoExecutionException("Error in reading JSON Result File: " + sourceJsonReportDirectory + " Exception: " + e.toString());
 		}
   		
   		// Convert JSON to HashMap which can be fed to Handlebars Context
     	Gson gson = new Gson();
-		Type type = new TypeToken<Map<String, Object>>(){}.getType();
-		Map<String, Object> map = gson.fromJson(reportData, type);   
+		Type type = new TypeToken<Collection<Object>>(){}.getType();
+		Collection<Object> map = gson.fromJson(reportData, type);   
 		
 		logger.info("Data converted to GSON");
 		Context context = Context.newBuilder(map).build();
@@ -122,8 +145,9 @@ public class HbcucumberReportPlugin extends AbstractMojo
     // Each json file is an array of objects. Add all objects into a single array
     // Create a top level object with single property "features" = array of objects
     public String mergeJsonReports(File[] dataFiles) throws IOException {
+    	logger.info("Start Merge");
     	JsonArray allFeatures = new JsonArray();
-    	
+    	    	
     	for(File dataFile: dataFiles) {
     		String reportData = Files.lines(Paths.get(dataFile.toURI())).collect(Collectors.joining());
     		JsonElement jsElem = new JsonParser().parse(reportData);
@@ -135,8 +159,7 @@ public class HbcucumberReportPlugin extends AbstractMojo
     		}
     	}
     	
-    	JsonObject base = new JsonObject();
-		base.add("features", allFeatures);
-		return new Gson().toJson(base);
+    	logger.info("End Merge");
+		return new Gson().toJson(allFeatures);
     }
 }

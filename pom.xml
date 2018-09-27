@@ -12,9 +12,9 @@
   <inceptionYear>2018</inceptionYear>    
     
   <scm>
-   <connection>scm:git:git@github.com:trivago/cluecumber-report-plugin.git</connection>
-   <developerConnection>scm:git:git@github.com:trivago/cluecumber-report-plugin.git</developerConnection>
-   <url>git@github.com:trivago/cluecumber-report-plugin.git</url>
+   <connection>scm:git@github.com:aksbenz/hbcucumber-report-plugin.git</connection>
+   <developerConnection>scm:git@github.com:aksbenz/hbcucumber-report-plugin.git</developerConnection>
+   <url>https://github.com/aksbenz/hbcucumber-report-plugin.git</url>
   </scm>
   
   <organization>
@@ -74,7 +74,7 @@
           <artifactId>maven-plugin-plugin</artifactId>
           <version>3.5.2</version>
           <configuration>
-              <goalPrefix>handlebars-custom-report</goalPrefix>
+              <goalPrefix>hbcucumber-report</goalPrefix>
               <skipErrorNoDescriptorsFound>false</skipErrorNoDescriptorsFound>
           </configuration>
           <executions>
