@@ -2,6 +2,9 @@ package com.aksbenz.hbcucumber;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+
 import static org.apache.commons.lang3.Validate.notNull;
 import static org.apache.commons.lang3.Validate.validIndex;
 
@@ -166,7 +169,7 @@ public enum CustomHelpers implements Helper<Object> {
 	    	}
 	    	else {
 	    		byte[] b = Base64.decodeBase64(str.getBytes(StandardCharsets.UTF_8));
-	    		htmlstr = "<span>" + new String(b) + "</span>";
+	    		htmlstr = "<pre>" + new String(b) + "</pre>";
 	    	}
 	    	
 	    	return htmlstr;
